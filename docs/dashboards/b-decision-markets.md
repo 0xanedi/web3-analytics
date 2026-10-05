@@ -2,7 +2,10 @@
 
 **Question:** what does the crowd expect, and has it drifted from its own recent average?
 
-**Page:** `dashboards/src/pages/DecisionMarkets.tsx` · **Query layer:** `fetchGammaMarkets(100)`, `fetchGammaEvents`, `fetchPriceHistory`, `fetchProtocol("polymarket")`
+**Page:** `dashboards/src/pages/DecisionMarkets.tsx` · **Query layer:** `fetchGammaMarkets(100)`, `fetchGammaEvents`, `fetchOutcomeHistory`, `fetchProtocol("polymarket")`, plus `fetchManifoldMarkets` / `fetchManifoldHistory` for the fallback
+
+**Primary venue:** Polymarket (`gamma-api.polymarket.com`, `clob.polymarket.com`)
+**Fallback venue:** Manifold Markets (`api.manifold.markets`) — see below
 
 ## KPIs
 
@@ -34,6 +37,31 @@
   with a `null` label render `—` rather than inventing a name.
 - **Top 100, not top 40.** Crypto price markets are sparse at the top of the volume table
   (sports and politics dominate), so the fetch limit is 100 to give the crypto panel content.
+
+## Fallback venue (network blocks)
+
+Polymarket is **blocked at the DNS level in some countries/ISPs** (`*.polymarket.com`
+resolves to `NXDOMAIN`), which would otherwise blank the entire dashboard for every
+visitor on that network. Kalshi was evaluated as an alternative and rejected: its API is
+keyless but **rejects cross-origin browser requests** (`403` for any non-Kalshi `Origin`,
+including preflight), so it cannot be called from a static site without a server proxy.
+
+The page therefore falls back to **Manifold Markets** — keyless, CORS-open
+(`access-control-allow-origin: *`), and not blocked:
+
+| Aspect | Behaviour |
+|---|---|
+| Trigger | The Polymarket fetch fails (network/DNS), caught per-source |
+| Mapping | Manifold binary markets → the same table shape (`outcomes: ["YES"]`, `outcomePrices: [probability]`) |
+| History / TWAP | Rebuilt from `GET /v0/bets?contractId=…` using each bet's `probAfter` |
+| Volume ranking | Manifold's API only sorts by time, so markets are fetched by recency and ranked by 24h volume client-side |
+| Banner | A visible "Fallback source active" notice names the cause and the substitute |
+| Unaffected | Polymarket TVL, funding rounds, and milestones (all DefiLlama) render either way |
+| Not available | Event-level volume and open interest — the events panel shows an explicit note instead |
+
+Polymarket remains the primary source and loads automatically wherever it is reachable.
+Manifold is a **play-money** venue, so it is always presented as a labelled fallback,
+never as Polymarket data.
 
 ## Caveats
 

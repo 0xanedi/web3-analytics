@@ -75,6 +75,7 @@ All free, all keyless:
 | `clob.polymarket.com` | Outcome price history (for the TWAP) |
 | `api.ethplorer.io` | Token holders and supply (public `freeKey` demo key) |
 | `api.coingecko.com` | Token market charts (for price-vs-TWAP) |
+| `api.manifold.markets` | Prediction-market **fallback** when Polymarket is unreachable on the visitor's network |
 
 ---
 

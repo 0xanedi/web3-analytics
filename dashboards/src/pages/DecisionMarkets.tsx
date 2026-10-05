@@ -17,6 +17,8 @@ import { fetchJSON } from "../lib/http";
 import {
   fetchGammaEvents,
   fetchGammaMarkets,
+  fetchManifoldHistory,
+  fetchManifoldMarkets,
   fetchOutcomeHistory,
   fetchProtocol,
   twap,
@@ -30,11 +32,15 @@ import { useAsync } from "../lib/useAsync";
 const SPOT_COINS = ["coingecko:bitcoin", "coingecko:ethereum", "coingecko:solana"];
 const CRYPTO_RE = /\b(btc|bitcoin|eth|ethereum|sol|solana|xrp|ripple|ada|doge)\b/i;
 
+type Venue = "polymarket" | "manifold";
+
 interface Snapshot {
   markets: GammaMarket[];
   events: GammaEvent[];
   protocol: ProtocolDetail;
   spot: Record<string, number | null>;
+  venue: Venue;
+  venueError: string | null;
 }
 
 function PageHead() {
@@ -58,19 +64,59 @@ function PageHead() {
   );
 }
 
+/** Shown when the page is running on the fallback venue. */
+function VenueBanner({ error }: { error: string }) {
+  return (
+    <div className="card" style={{ marginBottom: "var(--gap)" }}>
+      <div className="card__label">
+        <span>Fallback source active</span>
+        <span className="hint">manifold.markets</span>
+      </div>
+      <p className="prose">
+        <strong>Polymarket is unreachable from this network</strong>{" "}
+        (<span className="kbd">{error.slice(0, 120)}</span>). Showing <strong>Manifold Markets</strong>{" "}
+        instead — a play-money prediction market with the same implied-probability and
+        price-history semantics. Polymarket remains the primary source and loads automatically
+        wherever it is reachable.
+      </p>
+    </div>
+  );
+}
+
 export function DecisionMarkets() {
   const { data, error, loading, reload } = useAsync<Snapshot>(async () => {
-    const [markets, events, protocol, spotRaw] = await Promise.all([
-      fetchGammaMarkets(100),
-      fetchGammaEvents(15),
+    const [protoRes, spotRes] = await Promise.allSettled([
       fetchProtocol("polymarket"),
       fetchJSON<{ coins: Record<string, { price: number }> }>(
         `https://coins.llama.fi/prices/current/${SPOT_COINS.join(",")}`,
       ),
     ]);
+    // DefiLlama is the core source — without it there is no page.
+    if (protoRes.status !== "fulfilled") throw protoRes.reason;
+
     const spot: Record<string, number | null> = {};
-    for (const coin of SPOT_COINS) spot[coin] = spotRaw.coins?.[coin]?.price ?? null;
-    return { markets, events, protocol, spot };
+    for (const coin of SPOT_COINS) {
+      spot[coin] = spotRes.status === "fulfilled" ? (spotRes.value.coins?.[coin]?.price ?? null) : null;
+    }
+
+    // Primary venue: Polymarket. If it is unreachable (e.g. a national/ISP DNS
+    // block of *.polymarket.com) fall back to Manifold Markets rather than
+    // blanking the page — one source failing must not take down the dashboard.
+    let venue: Venue = "polymarket";
+    let venueError: string | null = null;
+    let markets: GammaMarket[] = [];
+    let events: GammaEvent[] = [];
+    try {
+      const [m, e] = await Promise.all([fetchGammaMarkets(100), fetchGammaEvents(15)]);
+      markets = m;
+      events = e;
+    } catch (err) {
+      venue = "manifold";
+      venueError = err instanceof Error ? err.message : String(err);
+      markets = await fetchManifoldMarkets(400); // may throw -> surfaces as page error
+    }
+
+    return { markets, events, protocol: protoRes.value, spot, venue, venueError };
   }, []);
 
   const cryptoMarkets = useMemo(
@@ -95,7 +141,16 @@ export function DecisionMarkets() {
   }, [selectable, selectedId, cryptoMarkets, data]);
 
   const tokenId = selected?.clobTokenIds[0] ?? null;
-  const history = useAsync<PricePoint[]>(async () => (tokenId ? fetchOutcomeHistory(tokenId) : []), [tokenId]);
+  const venue = data?.venue ?? "polymarket";
+  const history = useAsync<PricePoint[]>(
+    async () =>
+      tokenId
+        ? venue === "manifold"
+          ? fetchManifoldHistory(tokenId)
+          : fetchOutcomeHistory(tokenId)
+        : [],
+    [tokenId, venue],
+  );
 
   const spotPrice = (coin: string) => data?.spot[coin] ?? null;
   const marketTvl = data
@@ -178,14 +233,22 @@ export function DecisionMarkets() {
       <AsyncSection loading={loading} error={error} onRetry={reload}>
         {data && (
           <>
+            {data.venue === "manifold" && data.venueError ? <VenueBanner error={data.venueError} /> : null}
+
             <div className="grid grid--stats">
               <StatCard
-                label="Top-100 volume · 24h"
+                label="Market volume · 24h"
                 value={fmtUsd(top24h)}
                 hint="sum of fetched"
                 delay={1}
               />
-              <StatCard label="Open interest" value={fmtUsd(oiTotal)} hint="top events" tone="amber" delay={2} />
+              <StatCard
+                label="Open interest"
+                value={venue === "manifold" ? "n/a" : fmtUsd(oiTotal)}
+                hint={venue === "manifold" ? "not on fallback" : "top events"}
+                tone="amber"
+                delay={2}
+              />
               <StatCard label="Polymarket TVL" value={fmtUsd(marketTvl)} hint="DefiLlama" delay={3} />
               <StatCard
                 label="Live markets"
@@ -232,7 +295,10 @@ export function DecisionMarkets() {
             </section>
 
             <section className="section rise rise-3">
-              <SectionHead title={<>Hot markets</>} note="gamma-api · ordered by 24h volume" />
+              <SectionHead
+                title={<>Hot markets</>}
+                note={venue === "manifold" ? "manifold.markets · ranked by 24h volume" : "gamma-api · ordered by 24h volume"}
+              />
               <div className="card card--flush">
                 <div className="table-wrap">
                   <DataTable caption="Top Polymarket markets" columns={marketCols} rows={data.markets.slice(0, 20)} keyOf={(m) => m.id} />
@@ -279,7 +345,7 @@ export function DecisionMarkets() {
                     TWAP inspector <span className="rule">/</span> outcome price vs 7-day time-weighted average
                   </>
                 }
-                note="clob.polymarket.com/prices-history · fidelity 60m"
+                note={venue === "manifold" ? "manifold.markets/bets · probAfter series" : "clob.polymarket.com/prices-history · fidelity 60m"}
               />
               <div className="card">
                 <label className="card__label" htmlFor="market-select">
@@ -345,13 +411,30 @@ export function DecisionMarkets() {
             </section>
 
             <section className="section rise rise-5">
-              <SectionHead title={<>Event flow &amp; company milestones</>} note="gamma events · DefiLlama raises/hallmarks" />
+              <SectionHead
+                title={<>Event flow &amp; company milestones</>}
+                note={venue === "manifold" ? "DefiLlama raises/hallmarks · events via gamma" : "gamma events · DefiLlama raises/hallmarks"}
+              />
               <div className="grid grid--2">
-                <div className="card card--flush">
-                  <div className="table-wrap">
-                    <DataTable caption="Top events" columns={eventCols} rows={data.events.slice(0, 10)} keyOf={(e) => e.id} />
+                {venue === "manifold" ? (
+                  <div className="card">
+                    <div className="card__label">
+                      <span>Event grouping</span>
+                      <span className="hint">unavailable on fallback</span>
+                    </div>
+                    <p className="prose">
+                      The fallback source does not expose event-level volume or open interest, so this
+                      panel is hidden while Polymarket is unreachable. Funding rounds and milestones
+                      come from DefiLlama and are unaffected.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="card card--flush">
+                    <div className="table-wrap">
+                      <DataTable caption="Top events" columns={eventCols} rows={data.events.slice(0, 10)} keyOf={(e) => e.id} />
+                    </div>
+                  </div>
+                )}
                 <div className="card card--flush">
                   <div className="table-wrap">
                     <DataTable

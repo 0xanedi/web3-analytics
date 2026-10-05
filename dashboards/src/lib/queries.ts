@@ -499,6 +499,59 @@ export function twap(history: PricePoint[], days = 7): number | null {
   return total > 0 ? weighted / total : null;
 }
 
+/* ===================== Manifold Markets — fallback (B) ==================== */
+
+const MANIFOLD = "https://api.manifold.markets/v0";
+
+/**
+ * Manifold Markets, mapped into the same shape the tables already render.
+ *
+ * Used as a fallback when Polymarket is unreachable (e.g. national DNS blocks
+ * of *.polymarket.com). Manifold is keyless and CORS-open; it is a play-money
+ * venue, so it is presented as an explicit fallback, never as Polymarket data.
+ *
+ * The API only sorts by time, so we fetch recently-active markets and rank by
+ * 24h volume client-side.
+ */
+export async function fetchManifoldMarkets(limit = 400): Promise<GammaMarket[]> {
+  const rows = await fetchJSON<Record<string, any>[]>(
+    `${MANIFOLD}/markets?limit=${limit}&sort=last-bet-time&order=desc`,
+    { timeoutMs: 20_000 },
+  );
+  return rows
+    .filter((m) => !m.isResolved && typeof m.probability === "number")
+    .map((m) => ({
+      id: String(m.id),
+      question: m.question ?? "?",
+      slug: m.slug ?? "",
+      eventTitle: Array.isArray(m.groupSlugs) && m.groupSlugs.length > 0 ? m.groupSlugs[0] : null,
+      outcomes: ["YES"],
+      outcomePrices: [m.probability as number],
+      volume24h: m.volume24Hours ?? 0,
+      volumeTotal: m.volume ?? 0,
+      volume1w: 0,
+      liquidity: m.totalLiquidity ?? 0,
+      endDate: m.closeTime ? new Date(m.closeTime).toISOString() : null,
+      spread: null,
+      lastTradePrice: m.probability as number,
+      clobTokenIds: [String(m.id)], // reused as the history handle
+      negRisk: false,
+    }))
+    .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
+}
+
+/** Manifold price history rebuilt from bets (`probAfter`) — seconds. */
+export async function fetchManifoldHistory(contractId: string): Promise<PricePoint[]> {
+  const bets = await fetchJSON<Record<string, any>[]>(
+    `${MANIFOLD}/bets?contractId=${encodeURIComponent(contractId)}&limit=1000`,
+    { timeoutMs: 20_000 },
+  );
+  return bets
+    .filter((b) => typeof b.probAfter === "number" && typeof b.createdTime === "number")
+    .map((b) => ({ t: Math.round((b.createdTime as number) / 1000), p: b.probAfter as number }))
+    .sort((a, b) => a.t - b.t);
+}
+
 /* ========================== CoinGecko — prices (C) ======================== */
 
 const COINGECKO = "https://api.coingecko.com/api/v3";

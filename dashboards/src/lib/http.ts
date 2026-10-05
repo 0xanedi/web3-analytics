@@ -8,6 +8,7 @@ export class HttpError extends Error {
     message: string,
     readonly url: string,
     readonly status?: number,
+    readonly kind: "http" | "network" | "timeout" = "http",
   ) {
     super(message);
     this.name = "HttpError";
@@ -46,6 +47,10 @@ export async function fetchJSON<T>(url: string, opts: FetchOptions = {}): Promis
       if (err instanceof HttpError && err.status !== undefined && err.status < 500 && err.status !== 429) {
         break; // client error — retrying is pointless
       }
+      // A TypeError from fetch() is a transport failure (DNS block, offline,
+      // CORS). Retrying in 400ms cannot fix it — fail fast so callers can fall
+      // back immediately instead of after three timeouts.
+      if (err instanceof TypeError) break;
       if (attempt < retries) await sleep(400 * 2 ** attempt);
     } finally {
       clearTimeout(timer);
@@ -53,8 +58,18 @@ export async function fetchJSON<T>(url: string, opts: FetchOptions = {}): Promis
   }
 
   if (lastError instanceof HttpError) throw lastError;
-  const message = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new HttpError(`${message} — ${shortUrl(url)}`, url);
+
+  // A bare fetch() rejection is a transport failure: DNS block, offline, CORS
+  // preflight rejection, or an aborted timeout. Classify it so callers can show
+  // a precise message instead of a generic "Failed to fetch".
+  const name = (lastError as { name?: string } | null)?.name;
+  const kind: "network" | "timeout" = name === "AbortError" ? "timeout" : "network";
+  const raw = lastError instanceof Error ? lastError.message : String(lastError);
+  const hint =
+    kind === "timeout"
+      ? "request timed out"
+      : "host unreachable (DNS block, offline, or CORS)";
+  throw new HttpError(`${hint}: ${raw} — ${shortUrl(url)}`, url, undefined, kind);
 }
 
 function shortUrl(url: string): string {

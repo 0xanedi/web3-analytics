@@ -83,6 +83,8 @@ probes used are committed in `scripts/`. Bugs found and fixed:
 | "Outcome vs spot" table was empty | no crypto-linked markets in the top 40 by volume | fetch the top 100 |
 | Raises table invented a "Strategic" label for unlabelled rounds | `round` is null for some rounds and was defaulted to a real round name | render `—` when unknown |
 | Charts rendered blank in captures | multi-year daily series produced 195 KB SVG paths that missed the first raster pass | stride-sample long series + flush paints before capture |
+| Whole page blanked when Polymarket was unreachable | one `Promise.all` coupled every panel to a single source | per-source `allSettled` + Manifold fallback venue |
+| Network failures were retried 3× before any fallback | the retry loop did not distinguish transport errors | fail fast on `TypeError` (DNS/offline/CORS) |
 
 **Documented limitations** (not hidden, not "fixed" by guessing):
 

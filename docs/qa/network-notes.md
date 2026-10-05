@@ -28,6 +28,36 @@ For headless Chrome, the equivalent is a host-resolver rule:
 The local QA screenshot helper (`qa_shot.js`, in the browser-tooling skill, not in this repo)
 takes a `--polymarket` flag that applies exactly this rule.
 
+## Country-level blocking and the fallback venue
+
+The `*.polymarket.com` NXDOMAIN above is consistent with a **national/ISP DNS block**
+(Polymarket is restricted in several countries). That is not just a local dev annoyance: it
+would blank the Decision Markets page for *every* visitor on such a network.
+
+Mitigations, in order of preference:
+
+1. **Fallback venue.** The page catches a Polymarket failure per-source and switches to
+   **Manifold Markets** (`api.manifold.markets`) — keyless, CORS-open, not blocked — with a
+   visible banner naming the cause. Polymarket remains primary everywhere it is reachable.
+2. **Per-source isolation.** The page uses `Promise.allSettled`, so DefiLlama panels (TVL,
+   funding, milestones) still render when the prediction-market source is unreachable. One
+   source failing never takes down the page.
+
+### Kalshi was evaluated and rejected
+
+Kalshi (`api.elections.kalshi.com`) is keyless and *is* reachable from blocked networks, but
+it **refuses cross-origin browser requests**:
+
+| Request | Result |
+|---|---|
+| no `Origin` | `200` |
+| `Origin: https://kalshi.com` | `200` |
+| `Origin: https://example.com` | `403` |
+| `Origin: https://0xanedi.github.io` | `403` |
+| `OPTIONS` preflight | `403` |
+
+A static client-side app cannot call it without a server proxy, so it was not used.
+
 ## Why this is in the repo
 
 Because the first symptom looked like a dashboard bug ("Decision Markets page shows no data"),
