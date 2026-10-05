@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title description">
-  <title id="title">Carlos Patricio Gonzalez Guerrico — Senior Data Analyst and AI Engineer</title>
-  <desc id="description">A dark Geist profile banner showing Carlos Patricio Gonzalez Guerrico's identity, location, and concise terminal-style focus statement.</desc>
+  <title id="title">0xanedi — Data Engineer and AI Engineer</title>
+  <desc id="description">A dark Geist profile banner with a terminal-style focus statement.</desc>
   <defs>
     <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#09090b"/>
@@ -70,19 +70,19 @@
   <path d="M72 264H1128" stroke="#ffffff" stroke-opacity="0.13"/>
 
   <text x="72" y="80" class="mono enter enter-kicker" fill="var(--color-text-secondary)" font-size="15" letter-spacing="2">DATA / AI / FINTECH</text>
-  <text x="72" y="152" class="sans enter enter-name" fill="var(--color-text-primary)" font-size="44" font-weight="650" letter-spacing="-1.45">Carlos Patricio Gonzalez Guerrico</text>
-  <text x="72" y="198" class="sans enter enter-role" fill="#d4d4d8" font-size="24" letter-spacing="-.35">Senior Data Analyst and AI Engineer</text>
+  <text x="72" y="152" class="sans enter enter-name" fill="var(--color-text-primary)" font-size="44" font-weight="650" letter-spacing="-1.45">0xanedi</text>
+  <text x="72" y="198" class="sans enter enter-role" fill="#d4d4d8" font-size="24" letter-spacing="-.35">Senior Data Engineer · AI Engineer</text>
   <g class="enter enter-meta">
     <circle class="status" cx="77" cy="231" r="5" fill="var(--color-status)"/>
-    <text x="92" y="237" class="mono" fill="var(--color-text-secondary)" font-size="15">BUENOS AIRES · UTC−3</text>
+    <text x="92" y="237" class="mono" fill="var(--color-text-secondary)" font-size="15">REMOTE · WORLDWIDE</text>
   </g>
 
-  <text x="72" y="296" class="mono enter enter-terminal-command" fill="var(--color-text-terminal)" font-size="17">patricio@dev:~$ cat role.txt</text>
+  <text x="72" y="296" class="mono enter enter-terminal-command" fill="var(--color-text-terminal)" font-size="17">0xanedi@dev:~$ cat role.txt</text>
   <g class="enter enter-terminal-command">
     <rect class="cursor" x="370" y="279" width="7" height="20" rx="1" fill="var(--color-status)"/>
   </g>
-  <text x="72" y="319" class="mono enter enter-terminal-output" fill="#a7f3d0" font-size="17">&gt; Senior Data Analyst &amp; AI Engineer @ Mercado Pago</text>
-  <text x="72" y="343" class="mono enter enter-focus-command" fill="var(--color-text-terminal)" font-size="17">patricio@dev:~$ echo $FOCUS</text>
+  <text x="72" y="319" class="mono enter enter-terminal-output" fill="#a7f3d0" font-size="17">&gt; Senior Data Engineer &amp; AI Engineer</text>
+  <text x="72" y="343" class="mono enter enter-focus-command" fill="var(--color-text-terminal)" font-size="17">0xanedi@dev:~$ echo $FOCUS</text>
   <text x="72" y="366" class="mono enter enter-focus-output" fill="#a7f3d0" font-size="17">&gt; data pipelines · AI agents · retrieval systems</text>
 
 </svg>
