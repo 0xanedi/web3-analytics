@@ -1,0 +1,69 @@
+/* ------------------------------------------------------------------
+   On-Chain Ledger — design tokens
+   Aesthetic: financial broadsheet printed on a terminal. Ink-black
+   paper, warm cream type, acid-green ledger ink, amber highlights.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* Surfaces — green-tinted blacks */
+  --ink: #0a0e0d;
+  --ink-2: #0e1412;
+  --ink-3: #131a17;
+  --ink-4: #192320;
+
+  /* Lines */
+  --line: #24322c;
+  --line-strong: #35493f;
+
+  /* Type */
+  --paper: #ece7da;
+  --paper-dim: #a7ad9f;
+  --paper-faint: #6f7a70;
+
+  /* Signals */
+  --acid: #c6f135;      /* primary accent / positive */
+  --amber: #ffb454;     /* highlight / caution */
+  --coral: #ff6b57;     /* negative */
+  --sky: #6ec3ff;       /* data series 3 */
+  --mint: #7fe3c0;      /* data series 4 */
+
+  /* Chart palette */
+  --s1: #c6f135;
+  --s2: #ffb454;
+  --s3: #6ec3ff;
+  --s4: #7fe3c0;
+  --s5: #ff6b57;
+  --s6: #d9a7ff;
+
+  /* Type families */
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Instrument Sans", "Helvetica Neue", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  /* Type scale */
+  --fs-masthead: clamp(2.4rem, 6vw, 4.6rem);
+  --fs-display: clamp(1.7rem, 3.4vw, 2.6rem);
+  --fs-h2: clamp(1.15rem, 2vw, 1.45rem);
+  --fs-body: 0.95rem;
+  --fs-small: 0.8rem;
+  --fs-micro: 0.68rem;
+
+  /* Space */
+  --gap: 1rem;
+  --pad: 1.15rem;
+  --radius: 3px;
+
+  --maxw: 1360px;
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
